@@ -12,7 +12,7 @@
             background-color: #f0f0f0;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
             transition: background-color 0.3s, color 0.3s;
         }
@@ -155,7 +155,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .player-buttons {
@@ -378,6 +378,15 @@
             justify-content: center;
             width: 100%;
             position: relative;
+        }
+
+        /* Centrado vertical y horizontal para la pantalla de inicio */
+        #stepStart {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
         }
     </style>
 </head>
