@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego del Impostor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+        }
+        button {
+            padding: 15px 30px;
+            margin: 10px 0;
+            font-size: 18px;
+            width: 100%;
+            max-width: 200px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .player-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #e8f5e8;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #2e7d32;
+            font-weight: bold;
+            display: none;
+        }
+        .code-input, .number-input {
+            padding: 12px;
+            font-size: 18px;
+            width: 250px;
+            text-align: center;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .code-input {
+            text-transform: uppercase;
+        }
+        .number-input {
+            width: 100px;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .impostor {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 3px solid #c62828;
+        }
+        .inocente {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border: 3px solid #2e7d32;
+        }
+        .hidden {
+            display: none;
+        }
+        .player-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .code-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border: 2px dashed #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Estado de jugadores listos -->
+        <div id="player1Status" class="player-status">Jugador 1 Listo</div>
+        <div id="player2Status" class="player-status">Jugador 2 Listo</div>
+        <div id="player3Status" class="player-status">Jugador 3 Listo</div>
+        <div id="player4Status" class="player-status">Jugador 4 Listo</div>
+
+        <!-- Paso 1: Botón Empezar -->
+        <div id="stepStart">
+            <h1>🎮 Juego del Impostor</h1>
+            <button onclick="startGame()">Empezar</button>
+        </div>
+
+        <!-- Paso 2: Selección de jugador -->
+        <div id="stepPlayerSelect" class="hidden">
+            <h1>Selecciona tu jugador</h1>
+            <div class="player-buttons">
+                <button onclick="selectPlayer(1)">Jugador 1</button>
+                <button onclick="selectPlayer(2)">Jugador 2</button>
+                <button onclick="selectPlayer(3)">Jugador 3</button>
+                <button onclick="selectPlayer(4)">Jugador 4</button>
+            </div>
+        </div>
+
+        <!-- Paso 3: Para Jugador 1 - Seleccionar número de jugadores -->
+        <div id="stepPlayerCount" class="hidden">
+            <h1>Configurar Partida</h1>
+            <div class="instructions">
+                <p>🎯 <strong>Jugador 1 - Configura la partida</strong></p>
+                <p>¿Cuántos jugadores van a jugar?</p>
+            </div>
+            <input type="number" id="totalPlayers" class="number-input" min="3" max="10" value="4">
+            <br>
+            <button onclick="setPlayerCount()">Crear Partida</button>
+        </div>
+
+        <!-- Paso 4: Input código de partida -->
+        <div id="stepCodeInput" class="hidden">
+            <h1>Unirse a partida</h1>
+            
+            <div id="createCodeSection" class="hidden">
+                <div class="instructions">
+                    <p>📝 <strong>Instrucciones para el Jugador 1:</strong></p>
+                    <p>1. Comparte este código con los demás jugadores</p>
+                    <p>2. Después pulsa "Unirme a esta Partida"</p>
+                </div>
+                
+                <div id="codeDisplay">
+                    <p>¡Partida creada! Comparte este código:</p>
+                    <div id="gameCode" class="code-display"></div>
+                    <button onclick="joinWithCreatedCode()">Unirme a esta Partida</button>
+                </div>
+            </div>
+
+            <div id="joinCodeSection">
+                <div class="instructions">
+                    <p><strong>Para los demás jugadores:</strong></p>
+                    <p>Ingresa el código que te compartió el Jugador 1:</p>
+                </div>
+                <input type="text" id="inputCode" class="code-input" placeholder="Ej: 986NASFGD" maxlength="30">
+                <br>
+                <button onclick="joinGame()">Unirse con Código</button>
+            </div>
+        </div>
+
+        <!-- Paso 5: Mostrar resultado -->
+        <div id="stepResult" class="hidden">
+            <h1>Tu rol es:</h1>
+            <div id="result" class="result"></div>
+            <button onclick="resetGame()">Volver a Jugar</button>
+        </div>
+    </div>
+
+    <script>
+        // MÁS DE 100 PALABRAS SECRETAS - 3 categorías ampliadas
+        const palabras = [
+            // CATEGORÍA 1: ANIMALES Y NATURALEZA (35 palabras)
+            "elefante", "dinosaurio", "jirafa", "delfín", "mariposa", 
+            "camaleón", "koala", "pinguino", "armadillo", "ornitorrinco",
+            "leopardo", "canguro", "flamenco", "panda", "tucán",
+            "ballena", "pulpo", "ardilla", "erizo", "murciélago",
+            "cebra", "hipopótamo", "rinoceronte", "gorila", "chimpancé",
+            "águila", "búho", "colibrí", "pavo real", "cisne",
+            "cocodrilo", "serpiente", "tortuga", "rana", "salamandra",
+
+            // CATEGORÍA 2: OBJETOS Y TECNOLOGÍA (35 palabras)
+            "bicicleta", "guitarra", "teléfono", "robot", "cohete",
+            "paraguas", "brújula", "telescopio", "megáfono", "tambor",
+            "computadora", "teclado", "auriculares", "dron", "satélite",
+            "cámara", "micrófono", "altavoz", "proyector", "impresora",
+            "reloj", "espejo", "linterna", "maleta", "sombrilla",
+            "martillo", "destornillador", "llave", "candado", "cuerda",
+            "globo", "cometa", "yoyo", "rompecabezas", "dominó",
+
+            // CATEGORÍA 3: FANTASÍA Y AVENTURA (35 palabras)
+            "pirata", "sirena", "astronauta", "superhéroe", "dragón",
+            "magia", "tesoro", "misterio", "aventura", "fantasía",
+            "hechicero", "caballero", "bruja", "hada", "duende",
+            "unicornio", "fenix", "grifo", "quimera", "minotauro",
+            "castillo", "fortaleza", "palacio", "templo", "pirámide",
+            "espada", "escudo", "armadura", "corona", "anillo",
+            "mapa", "brújula", "botín", "medallón", "gema"
+        ];
+
+        // Sistema de memoria para evitar repeticiones recientes
+        let palabrasUsadasRecientemente = [];
+        const MAX_PALABRAS_RECIENTES = 15;
+
+        // Sistema para llevar cuenta de quién ha sido impostor
+        let historialImpostores = [];
+        const MAX_HISTORIAL = 10;
+
+        let jugadorSeleccionado = 0;
+        let totalJugadoresPartida = 4;
+        let gameConfig = {
+            palabraSecreta: "",
+            jugadorImpostor: 0,
+            codigo: ""
+        };
+
+        // Función para obtener una palabra que no se haya usado recientemente
+        function obtenerPalabraAleatoria() {
+            let palabra;
+            let intentos = 0;
+            const maxIntentos = 30;
+            
+            do {
+                palabra = palabras[Math.floor(Math.random() * palabras.length)];
+                intentos++;
+                
+                if (intentos > maxIntentos) {
+                    palabrasUsadasRecientemente = [];
+                    break;
+                }
+            } while (palabrasUsadasRecientemente.includes(palabra));
+            
+            palabrasUsadasRecientemente.push(palabra);
+            
+            if (palabrasUsadasRecientemente.length > MAX_PALABRAS_RECIENTES) {
+                palabrasUsadasRecientemente.shift();
+            }
+            
+            return palabra;
+        }
+
+        // Función MEJORADA para seleccionar impostor de forma más justa
+        function seleccionarImpostorJusto(codigoCompleto, totalJugadores) {
+            // Crear un hash más robusto del código
+            let hash = 0;
+            for (let i = 0; i < codigoCompleto.length; i++) {
+                const char = codigoCompleto.charCodeAt(i);
+                hash = ((hash << 7) - hash) + char;
+                hash = hash & hash; // Convertir a 32-bit integer
+            }
+            
+            // Usar el hash absoluto para calcular el impostor
+            const impostor = Math.abs(hash) % totalJugadores + 1;
+            
+            return impostor;
+        }
+
+        // Función para codificar una palabra a un código de letras
+        function codificarPalabra(palabra) {
+            const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let codigo = '';
+            let suma = 0;
+            
+            for (let i = 0; i < 6; i++) {
+                const indicePalabra = i % palabra.length;
+                const charCode = palabra.charCodeAt(indicePalabra);
+                suma += charCode;
+                
+                const indiceLetra = (charCode + i + suma) % 26;
+                codigo += letras[indiceLetra];
+            }
+            return codigo;
+        }
+
+        // Función para decodificar el código a la palabra original
+        function decodificarPalabra(codigo) {
+            // Buscar la palabra en la lista que mejor coincida con el código
+            for (let palabra of palabras) {
+                const codigoGenerado = codificarPalabra(palabra);
+                if (codigoGenerado === codigo) {
+                    return palabra;
+                }
+            }
+            
+            // Si no encuentra coincidencia exacta, buscar la más similar
+            let mejorPalabra = palabras[0];
+            let mejorPuntuacion = 0;
+            
+            for (let palabra of palabras) {
+                const codigoGenerado = codificarPalabra(palabra);
+                let puntuacion = 0;
+                
+                for (let i = 0; i < codigo.length; i++) {
+                    if (codigoGenerado[i] === codigo[i]) {
+                        puntuacion++;
+                    }
+                }
+                
+                if (puntuacion > mejorPuntuacion) {
+                    mejorPuntuacion = puntuacion;
+                    mejorPalabra = palabra;
+                }
+            }
+            
+            return mejorPalabra;
+        }
+
+        function startGame() {
+            document.getElementById('stepStart').classList.add('hidden');
+            document.getElementById('stepPlayerSelect').classList.remove('hidden');
+        }
+
+        function selectPlayer(numero) {
+            jugadorSeleccionado = numero;
+            
+            // Mostrar el estado del jugador seleccionado
+            document.getElementById(`player${numero}Status`).style.display = 'block';
+            
+            // Ocultar selección de jugador
+            document.getElementById('stepPlayerSelect').classList.add('hidden');
+            
+            if (numero === 1) {
+                // Si es Jugador 1, mostrar configuración de número de jugadores
+                document.getElementById('stepPlayerCount').classList.remove('hidden');
+            } else {
+                // Si es otro jugador, mostrar directamente la pantalla de código
+                document.getElementById('stepCodeInput').classList.remove('hidden');
+                document.getElementById('createCodeSection').classList.add('hidden');
+                document.getElementById('joinCodeSection').classList.remove('hidden');
+            }
+        }
+
+        function setPlayerCount() {
+            const count = parseInt(document.getElementById('totalPlayers').value);
+            
+            if (count < 3 || count > 10 || isNaN(count)) {
+                alert("Por favor, introduce un número entre 3 y 10");
+                return;
+            }
+            
+            totalJugadoresPartida = count;
+            
+            // Crear el código de partida automáticamente
+            createGameCode();
+        }
+
+        function createGameCode() {
+            // Elegir palabra aleatoria (evitando repeticiones recientes)
+            const palabraSecreta = obtenerPalabraAleatoria();
+            
+            // Codificar la palabra
+            const codigoPalabra = codificarPalabra(palabraSecreta);
+            
+            // Generar número aleatorio para el código (100-999)
+            const numeroCodigo = Math.floor(Math.random() * 900) + 100;
+            
+            // Crear código final: "986NASFGD"
+            const codigoCompleto = numeroCodigo + codigoPalabra;
+            
+            // Determinar impostor usando el sistema MEJORADO
+            const jugadorImpostor = seleccionarImpostorJusto(codigoCompleto, totalJugadoresPartida);
+
+            // Guardar configuración
+            gameConfig.palabraSecreta = palabraSecreta;
+            gameConfig.jugadorImpostor = jugadorImpostor;
+            gameConfig.codigo = codigoCompleto;
+
+            // Ocultar configuración y mostrar código
+            document.getElementById('stepPlayerCount').classList.add('hidden');
+            document.getElementById('stepCodeInput').classList.remove('hidden');
+            document.getElementById('createCodeSection').classList.remove('hidden');
+            document.getElementById('joinCodeSection').classList.add('hidden');
+            
+            // Mostrar el código
+            document.getElementById('gameCode').textContent = gameConfig.codigo;
+        }
+
+        function joinWithCreatedCode() {
+            // El Jugador 1 se une a su propia partida creada
+            showResult();
+        }
+
+        function joinGame() {
+            const inputCode = document.getElementById('inputCode').value.toUpperCase().trim();
+            
+            if (inputCode.length < 9) {
+                alert("Código inválido. Debe tener al menos 9 caracteres (ej: 986NASFGD)");
+                return;
+            }
+
+            // Extraer número y código de letras
+            const numeroCodigo = inputCode.substring(0, 3);
+            const codigoPalabra = inputCode.substring(3, 9);
+
+            // Verificar que los primeros 3 caracteres sean números
+            if (!/^\d+$/.test(numeroCodigo)) {
+                alert("Código inválido. Los primeros 3 caracteres deben ser números");
+                return;
+            }
+
+            // Decodificar la palabra secreta
+            const palabraSecreta = decodificarPalabra(codigoPalabra);
+            
+            // Para jugadores que no son el 1, necesitamos determinar el total de jugadores
+            // Podemos estimarlo basado en el código o usar un valor por defecto
+            const totalJugadores = totalJugadoresPartida || 4;
+            
+            // Determinar impostor usando el sistema MEJORADO
+            const jugadorImpostor = seleccionarImpostorJusto(inputCode, totalJugadores);
+
+            // Guardar configuración
+            gameConfig.palabraSecreta = palabraSecreta;
+            gameConfig.jugadorImpostor = jugadorImpostor;
+            gameConfig.codigo = inputCode;
+
+            showResult();
+        }
+
+        function showResult() {
+            // Ocultar input y mostrar resultado
+            document.getElementById('stepCodeInput').classList.add('hidden');
+            document.getElementById('stepResult').classList.remove('hidden');
+            
+            const resultado = document.getElementById('result');
+            
+            if (jugadorSeleccionado === gameConfig.jugadorImpostor) {
+                resultado.innerHTML = `
+                    <h2>🎭 IMPOSTOR</h2>
+                    <p>No conoces la palabra secreta</p>
+                    <p><small>Debes adivinar o no ser descubierto</small></p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">Código: ${gameConfig.codigo}</p>
+                    <p style="font-size: 0.9em; color: #666;">Jugadores: ${totalJugadoresPartida}</p>
+                `;
+                resultado.className = 'result impostor';
+            } else {
+                resultado.innerHTML = `
+                    <h2>✅ INOCENTE</h2>
+                    <p>La palabra secreta es:</p>
+                    <h1 style="font-size: 1.8em; margin: 10px 0;">"${gameConfig.palabraSecreta}"</h1>
+                    <p><small>Da pistas relacionadas con esta palabra</small></p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">Código: ${gameConfig.codigo}</p>
+                    <p style="font-size: 0.9em; color: #666;">Jugadores: ${totalJugadoresPartida}</p>
+                `;
+                resultado.className = 'result inocente';
+            }
+        }
+
+        function resetGame() {
+            // Ocultar todos los estados de jugadores
+            document.getElementById('player1Status').style.display = 'none';
+            document.getElementById('player2Status').style.display = 'none';
+            document.getElementById('player3Status').style.display = 'none';
+            document.getElementById('player4Status').style.display = 'none';
+            
+            // Ocultar resultado y mostrar selección de jugador
+            document.getElementById('stepResult').classList.add('hidden');
+            document.getElementById('stepPlayerSelect').classList.remove('hidden');
+            
+            // Resetear variables
+            jugadorSeleccionado = 0;
+            totalJugadoresPartida = 4;
+            gameConfig = { 
+                palabraSecreta: "", 
+                jugadorImpostor: 0, 
+                codigo: "" 
+            };
+            
+            // Resetear inputs
+            document.getElementById('totalPlayers').value = '4';
+            document.getElementById('inputCode').value = '';
+        }
+
+        // Permitir usar Enter en los inputs
+        document.getElementById('totalPlayers').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                setPlayerCount();
+            }
+        });
+
+        document.getElementById('inputCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                joinGame();
+            }
+        });
+    </script>
+</body>
+</html>
