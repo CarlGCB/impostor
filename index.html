@@ -153,6 +153,7 @@
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            margin-bottom: 20px;
         }
 
         h1 {
@@ -196,6 +197,45 @@
             background: #1a237e;
             color: #90caf9;
             border-color: #5c6bc0;
+        }
+
+        .add-player-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            transition: border-color 0.3s;
+        }
+
+        body.dark-theme .add-player-section {
+            border-top-color: #555;
+        }
+
+        .add-player-btn {
+            background-color: #2196F3 !important;
+            max-width: 250px !important;
+        }
+
+        .add-player-btn:hover {
+            background-color: #1976D2 !important;
+        }
+
+        body.dark-theme .add-player-btn {
+            background-color: #1565C0 !important;
+        }
+
+        body.dark-theme .add-player-btn:hover {
+            background-color: #0D47A1 !important;
+        }
+
+        .player-count-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme .player-count-info {
+            color: #ccc;
         }
 
         /* Botón de tema oscuro */
@@ -243,10 +283,9 @@
 
     <div class="container">
         <!-- Estado de jugadores listos -->
-        <div id="player1Status" class="player-status">Jugador 1 Listo</div>
-        <div id="player2Status" class="player-status">Jugador 2 Listo</div>
-        <div id="player3Status" class="player-status">Jugador 3 Listo</div>
-        <div id="player4Status" class="player-status">Jugador 4 Listo</div>
+        <div id="playerStatusContainer">
+            <!-- Los estados de jugadores se generarán dinámicamente -->
+        </div>
 
         <!-- Paso 1: Botón Empezar -->
         <div id="stepStart">
@@ -257,11 +296,18 @@
         <!-- Paso 2: Selección de jugador -->
         <div id="stepPlayerSelect" class="hidden">
             <h1>Selecciona tu jugador</h1>
-            <div class="player-buttons">
-                <button onclick="selectPlayer(1)">Jugador 1</button>
-                <button onclick="selectPlayer(2)">Jugador 2</button>
-                <button onclick="selectPlayer(3)">Jugador 3</button>
-                <button onclick="selectPlayer(4)">Jugador 4</button>
+            <div class="player-count-info" id="playerCountInfo">
+                Actualmente hay <span id="currentPlayerCount">4</span> jugadores
+            </div>
+            <div class="player-buttons" id="playerButtons">
+                <!-- Los botones de jugadores se generarán dinámicamente -->
+            </div>
+            
+            <div class="add-player-section">
+                <button class="add-player-btn" onclick="addPlayer()">➕ Añadir otro jugador</button>
+                <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                    Máximo 10 jugadores
+                </p>
             </div>
         </div>
 
@@ -349,10 +395,6 @@
         let palabrasUsadasRecientemente = [];
         const MAX_PALABRAS_RECIENTES = 15;
 
-        // Sistema para llevar cuenta de quién ha sido impostor
-        let historialImpostores = [];
-        const MAX_HISTORIAL = 10;
-
         let jugadorSeleccionado = 0;
         let totalJugadoresPartida = 4;
         let gameConfig = {
@@ -360,6 +402,10 @@
             jugadorImpostor: 0,
             codigo: ""
         };
+
+        // Array para almacenar los jugadores disponibles
+        let jugadoresDisponibles = [1, 2, 3, 4];
+        const MAX_JUGADORES = 10;
 
         // Función para cambiar entre temas
         function toggleTheme() {
@@ -379,6 +425,47 @@
 
         // Llamar al cargar la página
         loadTheme();
+
+        // Función para renderizar los botones de jugadores
+        function renderPlayerButtons() {
+            const playerButtonsContainer = document.getElementById('playerButtons');
+            const playerStatusContainer = document.getElementById('playerStatusContainer');
+            const playerCountInfo = document.getElementById('playerCountInfo');
+            
+            // Limpiar contenedores
+            playerButtonsContainer.innerHTML = '';
+            playerStatusContainer.innerHTML = '';
+            
+            // Actualizar información del contador
+            document.getElementById('currentPlayerCount').textContent = jugadoresDisponibles.length;
+            
+            // Crear botones y estados para cada jugador
+            jugadoresDisponibles.forEach(jugador => {
+                // Crear botón del jugador
+                const button = document.createElement('button');
+                button.textContent = `Jugador ${jugador}`;
+                button.onclick = () => selectPlayer(jugador);
+                playerButtonsContainer.appendChild(button);
+                
+                // Crear estado del jugador
+                const status = document.createElement('div');
+                status.id = `player${jugador}Status`;
+                status.className = 'player-status';
+                status.textContent = `Jugador ${jugador} Listo`;
+                playerStatusContainer.appendChild(status);
+            });
+        }
+
+        // Función para añadir un nuevo jugador
+        function addPlayer() {
+            if (jugadoresDisponibles.length < MAX_JUGADORES) {
+                const nuevoJugador = jugadoresDisponibles.length + 1;
+                jugadoresDisponibles.push(nuevoJugador);
+                renderPlayerButtons();
+            } else {
+                alert(`Máximo ${MAX_JUGADORES} jugadores permitidos`);
+            }
+        }
 
         // Función para obtener una palabra que no se haya usado recientemente
         function obtenerPalabraAleatoria() {
@@ -474,6 +561,8 @@
         function startGame() {
             document.getElementById('stepStart').classList.add('hidden');
             document.getElementById('stepPlayerSelect').classList.remove('hidden');
+            // Renderizar los botones de jugadores al iniciar
+            renderPlayerButtons();
         }
 
         function selectPlayer(numero) {
@@ -488,6 +577,8 @@
             if (numero === 1) {
                 // Si es Jugador 1, mostrar configuración de número de jugadores
                 document.getElementById('stepPlayerCount').classList.remove('hidden');
+                // Actualizar el valor por defecto con el número actual de jugadores
+                document.getElementById('totalPlayers').value = jugadoresDisponibles.length;
             } else {
                 // Si es otro jugador, mostrar directamente la pantalla de código
                 document.getElementById('stepCodeInput').classList.remove('hidden');
@@ -569,7 +660,7 @@
             
             // Para jugadores que no son el 1, necesitamos determinar el total de jugadores
             // Podemos estimarlo basado en el código o usar un valor por defecto
-            const totalJugadores = totalJugadoresPartida || 4;
+            const totalJugadores = totalJugadoresPartida || jugadoresDisponibles.length;
             
             // Determinar impostor usando el sistema MEJORADO
             const jugadorImpostor = seleccionarImpostorJusto(inputCode, totalJugadores);
@@ -613,10 +704,10 @@
 
         function resetGame() {
             // Ocultar todos los estados de jugadores
-            document.getElementById('player1Status').style.display = 'none';
-            document.getElementById('player2Status').style.display = 'none';
-            document.getElementById('player3Status').style.display = 'none';
-            document.getElementById('player4Status').style.display = 'none';
+            const statusElements = document.querySelectorAll('.player-status');
+            statusElements.forEach(status => {
+                status.style.display = 'none';
+            });
             
             // Ocultar resultado y mostrar selección de jugador
             document.getElementById('stepResult').classList.add('hidden');
@@ -634,6 +725,10 @@
             // Resetear inputs
             document.getElementById('totalPlayers').value = '4';
             document.getElementById('inputCode').value = '';
+            
+            // Resetear jugadores a los 4 iniciales
+            jugadoresDisponibles = [1, 2, 3, 4];
+            renderPlayerButtons();
         }
 
         // Permitir usar Enter en los inputs
