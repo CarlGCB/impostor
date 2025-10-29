@@ -12,7 +12,7 @@
             background-color: #f0f0f0;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             transition: background-color 0.3s, color 0.3s;
         }
@@ -20,6 +20,16 @@
         body.dark-theme {
             background-color: #1a1a1a;
             color: #ffffff;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            max-width: 900px;
+            width: 100%;
+            justify-content: center;
+            position: relative;
         }
 
         .container {
@@ -275,88 +285,194 @@
         body.dark-theme .theme-toggle::before {
             content: "☀️";
         }
+
+        /* Orden de jugadores - FUERA del contenedor principal */
+        .player-order {
+            background: #fff3e0;
+            padding: 25px;
+            border-radius: 15px;
+            border: 3px solid #ff9800;
+            width: 250px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: background-color 0.3s, color 0.3s;
+            position: absolute;
+            right: -280px;
+            top: 0;
+        }
+
+        body.dark-theme .player-order {
+            background: #3e2723;
+            border-color: #ffb74d;
+            color: #ffffff;
+        }
+
+        .player-order h3 {
+            margin-top: 0;
+            color: #e65100;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.3em;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme .player-order h3 {
+            color: #ffb74d;
+        }
+
+        .order-list {
+            text-align: left;
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .order-item {
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: #ffe0b2;
+            border-radius: 8px;
+            border-left: 5px solid #ff9800;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        body.dark-theme .order-item {
+            background: #5d4037;
+            border-left-color: #ffb74d;
+        }
+
+        .order-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: #ff9800;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 12px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        body.dark-theme .order-number {
+            background: #ffb74d;
+        }
+
+        .current-player {
+            background: #ffcc80 !important;
+            font-weight: bold;
+            transform: scale(1.02);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            border-left: 5px solid #e65100 !important;
+        }
+
+        body.dark-theme .current-player {
+            background: #8d6e63 !important;
+            border-left-color: #ff9800 !important;
+        }
+
+        /* Centrar el contenedor principal */
+        .centered-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+        }
     </style>
 </head>
 <body>
     <!-- Botón de tema oscuro -->
     <button class="theme-toggle" onclick="toggleTheme()"></button>
 
-    <div class="container">
-        <!-- Estado de jugadores listos -->
-        <div id="playerStatusContainer">
-            <!-- Los estados de jugadores se generarán dinámicamente -->
-        </div>
-
-        <!-- Paso 1: Botón Empezar -->
-        <div id="stepStart">
-            <h1>🎮 Juego del Impostor</h1>
-            <button onclick="startGame()">Empezar</button>
-        </div>
-
-        <!-- Paso 2: Selección de jugador -->
-        <div id="stepPlayerSelect" class="hidden">
-            <h1>Selecciona tu jugador</h1>
-            <div class="player-count-info" id="playerCountInfo">
-                Actualmente hay <span id="currentPlayerCount">4</span> jugadores
-            </div>
-            <div class="player-buttons" id="playerButtons">
-                <!-- Los botones de jugadores se generarán dinámicamente -->
-            </div>
-            
-            <div class="add-player-section">
-                <button class="add-player-btn" onclick="addPlayer()">➕ Añadir otro jugador</button>
-                <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
-                    Máximo 10 jugadores
-                </p>
-            </div>
-        </div>
-
-        <!-- Paso 3: Para Jugador 1 - Seleccionar número de jugadores -->
-        <div id="stepPlayerCount" class="hidden">
-            <h1>Configurar Partida</h1>
-            <div class="instructions">
-                <p>🎯 <strong>Jugador 1 - Configura la partida</strong></p>
-                <p>¿Cuántos jugadores van a jugar?</p>
-            </div>
-            <input type="number" id="totalPlayers" class="number-input" min="3" max="10" value="4">
-            <br>
-            <button onclick="setPlayerCount()">Crear Partida</button>
-        </div>
-
-        <!-- Paso 4: Input código de partida -->
-        <div id="stepCodeInput" class="hidden">
-            <h1>Unirse a partida</h1>
-            
-            <div id="createCodeSection" class="hidden">
-                <div class="instructions">
-                    <p>📝 <strong>Instrucciones para el Jugador 1:</strong></p>
-                    <p>1. Comparte este código con los demás jugadores</p>
-                    <p>2. Después pulsa "Unirme a esta Partida"</p>
+    <div class="main-content">
+        <div class="centered-container">
+            <div class="container">
+                <!-- Estado de jugadores listos -->
+                <div id="playerStatusContainer">
+                    <!-- Los estados de jugadores se generarán dinámicamente -->
                 </div>
-                
-                <div id="codeDisplay">
-                    <p>¡Partida creada! Comparte este código:</p>
-                    <div id="gameCode" class="code-display"></div>
-                    <button onclick="joinWithCreatedCode()">Unirme a esta Partida</button>
+
+                <!-- Paso 1: Botón Empezar -->
+                <div id="stepStart">
+                    <h1>🎮 Juego del Impostor</h1>
+                    <button onclick="startGame()">Empezar</button>
+                </div>
+
+                <!-- Paso 2: Selección de jugador -->
+                <div id="stepPlayerSelect" class="hidden">
+                    <h1>Selecciona tu jugador</h1>
+                    <div class="player-count-info" id="playerCountInfo">
+                        Actualmente hay <span id="currentPlayerCount">4</span> jugadores
+                    </div>
+                    <div class="player-buttons" id="playerButtons">
+                        <!-- Los botones de jugadores se generarán dinámicamente -->
+                    </div>
+                    
+                    <div class="add-player-section">
+                        <button class="add-player-btn" onclick="addPlayer()">➕ Añadir otro jugador</button>
+                        <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                            Máximo 10 jugadores
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Para Jugador 1 - Seleccionar número de jugadores -->
+                <div id="stepPlayerCount" class="hidden">
+                    <h1>Configurar Partida</h1>
+                    <div class="instructions">
+                        <p>🎯 <strong>Jugador 1 - Configura la partida</strong></p>
+                        <p>¿Cuántos jugadores van a jugar?</p>
+                    </div>
+                    <input type="number" id="totalPlayers" class="number-input" min="3" max="10" value="4">
+                    <br>
+                    <button onclick="setPlayerCount()">Crear Partida</button>
+                </div>
+
+                <!-- Paso 4: Input código de partida -->
+                <div id="stepCodeInput" class="hidden">
+                    <h1>Unirse a partida</h1>
+                    
+                    <div id="createCodeSection" class="hidden">
+                        <div class="instructions">
+                            <p>📝 <strong>Instrucciones para el Jugador 1:</strong></p>
+                            <p>1. Comparte este código con los demás jugadores</p>
+                            <p>2. Después pulsa "Unirme a esta Partida"</p>
+                        </div>
+                        
+                        <div id="codeDisplay">
+                            <p>¡Partida creada! Comparte este código:</p>
+                            <div id="gameCode" class="code-display"></div>
+                            <button onclick="joinWithCreatedCode()">Unirme a esta Partida</button>
+                        </div>
+                    </div>
+
+                    <div id="joinCodeSection">
+                        <div class="instructions">
+                            <p><strong>Para los demás jugadores:</strong></p>
+                            <p>Ingresa el código que te compartió el Jugador 1:</p>
+                        </div>
+                        <input type="text" id="inputCode" class="code-input" placeholder="Ej: 986NASFGD" maxlength="30">
+                        <br>
+                        <button onclick="joinGame()">Unirse con Código</button>
+                    </div>
+                </div>
+
+                <!-- Paso 5: Mostrar resultado -->
+                <div id="stepResult" class="hidden">
+                    <h1>Tu rol es:</h1>
+                    <div id="result" class="result"></div>
+                    <button onclick="resetGame()">Volver a Jugar</button>
                 </div>
             </div>
 
-            <div id="joinCodeSection">
-                <div class="instructions">
-                    <p><strong>Para los demás jugadores:</strong></p>
-                    <p>Ingresa el código que te compartió el Jugador 1:</p>
+            <!-- Orden de jugadores - FUERA del contenedor principal pero dentro del centered-container -->
+            <div id="playerOrder" class="player-order hidden">
+                <h3>🎯 Orden del Juego</h3>
+                <div id="orderList" class="order-list">
+                    <!-- El orden de jugadores se generará aquí -->
                 </div>
-                <input type="text" id="inputCode" class="code-input" placeholder="Ej: 986NASFGD" maxlength="30">
-                <br>
-                <button onclick="joinGame()">Unirse con Código</button>
             </div>
-        </div>
-
-        <!-- Paso 5: Mostrar resultado -->
-        <div id="stepResult" class="hidden">
-            <h1>Tu rol es:</h1>
-            <div id="result" class="result"></div>
-            <button onclick="resetGame()">Volver a Jugar</button>
         </div>
     </div>
 
@@ -400,7 +516,8 @@
         let gameConfig = {
             palabraSecreta: "",
             jugadorImpostor: 0,
-            codigo: ""
+            codigo: "",
+            ordenJugadores: []
         };
 
         // Array para almacenar los jugadores disponibles
@@ -425,6 +542,46 @@
 
         // Llamar al cargar la página
         loadTheme();
+
+        // Función para generar un orden aleatorio de jugadores
+        function generarOrdenJugadores(totalJugadores) {
+            const jugadores = Array.from({length: totalJugadores}, (_, i) => i + 1);
+            
+            // Algoritmo de Fisher-Yates para mezclar aleatoriamente
+            for (let i = jugadores.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [jugadores[i], jugadores[j]] = [jugadores[j], jugadores[i]];
+            }
+            
+            return jugadores;
+        }
+
+        // Función para mostrar el orden de jugadores
+        function mostrarOrdenJugadores() {
+            const orderList = document.getElementById('orderList');
+            const playerOrder = document.getElementById('playerOrder');
+            
+            orderList.innerHTML = '';
+            
+            gameConfig.ordenJugadores.forEach((jugador, index) => {
+                const orderItem = document.createElement('div');
+                orderItem.className = 'order-item';
+                
+                if (jugador === jugadorSeleccionado) {
+                    orderItem.classList.add('current-player');
+                }
+                
+                orderItem.innerHTML = `
+                    <span class="order-number">${index + 1}</span>
+                    Jugador ${jugador} ${jugador === jugadorSeleccionado ? ' (TÚ)' : ''}
+                `;
+                
+                orderList.appendChild(orderItem);
+            });
+            
+            // Mostrar la sección de orden
+            playerOrder.classList.remove('hidden');
+        }
 
         // Función para renderizar los botones de jugadores
         function renderPlayerButtons() {
@@ -561,6 +718,8 @@
         function startGame() {
             document.getElementById('stepStart').classList.add('hidden');
             document.getElementById('stepPlayerSelect').classList.remove('hidden');
+            // Ocultar orden de jugadores
+            document.getElementById('playerOrder').classList.add('hidden');
             // Renderizar los botones de jugadores al iniciar
             renderPlayerButtons();
         }
@@ -585,6 +744,9 @@
                 document.getElementById('createCodeSection').classList.add('hidden');
                 document.getElementById('joinCodeSection').classList.remove('hidden');
             }
+            
+            // Ocultar orden de jugadores
+            document.getElementById('playerOrder').classList.add('hidden');
         }
 
         function setPlayerCount() {
@@ -617,10 +779,14 @@
             // Determinar impostor usando el sistema MEJORADO
             const jugadorImpostor = seleccionarImpostorJusto(codigoCompleto, totalJugadoresPartida);
 
+            // Generar orden aleatorio de jugadores
+            const ordenJugadores = generarOrdenJugadores(totalJugadoresPartida);
+
             // Guardar configuración
             gameConfig.palabraSecreta = palabraSecreta;
             gameConfig.jugadorImpostor = jugadorImpostor;
             gameConfig.codigo = codigoCompleto;
+            gameConfig.ordenJugadores = ordenJugadores;
 
             // Ocultar configuración y mostrar código
             document.getElementById('stepPlayerCount').classList.add('hidden');
@@ -665,10 +831,14 @@
             // Determinar impostor usando el sistema MEJORADO
             const jugadorImpostor = seleccionarImpostorJusto(inputCode, totalJugadores);
 
+            // Generar orden aleatorio de jugadores (debe ser el mismo para todos)
+            const ordenJugadores = generarOrdenJugadores(totalJugadores);
+
             // Guardar configuración
             gameConfig.palabraSecreta = palabraSecreta;
             gameConfig.jugadorImpostor = jugadorImpostor;
             gameConfig.codigo = inputCode;
+            gameConfig.ordenJugadores = ordenJugadores;
 
             showResult();
         }
@@ -700,6 +870,9 @@
                 `;
                 resultado.className = 'result inocente';
             }
+            
+            // Mostrar el orden de jugadores
+            mostrarOrdenJugadores();
         }
 
         function resetGame() {
@@ -713,13 +886,17 @@
             document.getElementById('stepResult').classList.add('hidden');
             document.getElementById('stepPlayerSelect').classList.remove('hidden');
             
+            // Ocultar orden de jugadores
+            document.getElementById('playerOrder').classList.add('hidden');
+            
             // Resetear variables
             jugadorSeleccionado = 0;
             totalJugadoresPartida = 4;
             gameConfig = { 
                 palabraSecreta: "", 
                 jugadorImpostor: 0, 
-                codigo: "" 
+                codigo: "",
+                ordenJugadores: []
             };
             
             // Resetear inputs
