@@ -388,6 +388,22 @@
             align-items: center;
             min-height: 300px;
         }
+
+        /* Estilos para información de partida */
+        .game-info {
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ffa000;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-theme .game-info {
+            background: #3e2723;
+            color: #ffffff;
+            border-left-color: #ffb74d;
+        }
     </style>
 </head>
 <body>
@@ -461,7 +477,7 @@
                             <p><strong>Para los demás jugadores:</strong></p>
                             <p>Ingresa el código que te compartió el Jugador 1:</p>
                         </div>
-                        <input type="text" id="inputCode" class="code-input" placeholder="Ej: 986NASFGD" maxlength="30">
+                        <input type="text" id="inputCode" class="code-input" placeholder="Ej: 03086NASFGD" maxlength="30">
                         <br>
                         <button onclick="joinGame()">Unirse con Código</button>
                     </div>
@@ -471,7 +487,8 @@
                 <div id="stepResult" class="hidden">
                     <h1>Tu rol es:</h1>
                     <div id="result" class="result"></div>
-                    <button onclick="resetGame()">Volver a Jugar</button>
+                    <button onclick="nextRound()">🔄 Volver a Jugar</button>
+                    <button onclick="newGame()" style="background-color: #757575; margin-top: 10px;">🏠 Nueva Partida</button>
                 </div>
             </div>
 
@@ -520,8 +537,19 @@
         let palabrasUsadasRecientemente = [];
         const MAX_PALABRAS_RECIENTES = 15;
 
+        // Sistema de memoria para evitar que un jugador sea impostor dos veces seguidas
+        let ultimoImpostor = 0;
+        let historialImpostores = [];
+        const MAX_HISTORIAL_IMPOSTORES = 20;
+
+        // Sistema de rondas
+        let rondaActual = 1;
         let jugadorSeleccionado = 0;
         let totalJugadoresPartida = 4;
+        
+        // Almacenar el código actual para la siguiente ronda
+        let codigoPartidaActual = "";
+        
         let gameConfig = {
             palabraSecreta: "",
             jugadorImpostor: 0,
@@ -552,17 +580,84 @@
         // Llamar al cargar la página
         loadTheme();
 
-        // Función para generar un orden aleatorio de jugadores
-        function generarOrdenJugadores(totalJugadores) {
-            const jugadores = Array.from({length: totalJugadores}, (_, i) => i + 1);
+        // Función para generar un código que incluya información del número de jugadores
+        // Ahora el código comienza con dos dígitos que representan el número de jugadores (03..10)
+        function generarCodigoConJugadores(semilla, numJugadores) {
+            const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let codigo = '';
+            let hash = 0;
             
-            // Algoritmo de Fisher-Yates para mezclar aleatoriamente
+            // Incluir el número de jugadores en el hash
+            for (let i = 0; i < semilla.length; i++) {
+                const char = semilla.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            hash = (hash + numJugadores * 1000) & hash;
+            
+            // Generar 3 números basados en el hash (incluyendo info de jugadores)
+            for (let i = 0; i < 3; i++) {
+                const numero = Math.abs((hash + i * 13 + numJugadores * 7) % 10);
+                codigo += numero;
+            }
+            
+            // Generar 6 letras basadas en el hash (incluyendo info de jugadores)
+            for (let i = 0; i < 6; i++) {
+                const indiceLetra = Math.abs((hash + i * 17 + numJugadores * 11) % 26);
+                codigo += letras[indiceLetra];
+            }
+            
+            // Prefijar el número de jugadores con 2 dígitos (03..10)
+            const numStr = String(numJugadores).padStart(2, '0');
+            return numStr + codigo;
+        }
+
+        // Función para extraer el número de jugadores directamente desde los 2 primeros caracteres del código
+        function obtenerNumeroJugadoresDesdeCodigo(codigo) {
+            if (!codigo || codigo.length < 2) return 4;
+            const prefix = codigo.slice(0, 2);
+            const num = parseInt(prefix, 10);
+            if (!isNaN(num) && num >= 3 && num <= 10) {
+                return num;
+            }
+            return 4;
+        }
+
+        // Función para generar un orden determinista de jugadores
+        function generarOrdenDeterminista(totalJugadores, semilla) {
+            const jugadores = Array.from({length: totalJugadores}, (_, i) => i + 1);
+            let hash = 0;
+            
+            // Crear hash de la semilla
+            for (let i = 0; i < semilla.length; i++) {
+                const char = semilla.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            
+            // Algoritmo de Fisher-Yates con semilla determinista
             for (let i = jugadores.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+                const j = Math.abs((hash + i * 7)) % (i + 1);
                 [jugadores[i], jugadores[j]] = [jugadores[j], jugadores[i]];
             }
             
             return jugadores;
+        }
+
+        // Función para obtener una palabra determinista basada en el código
+        function obtenerPalabraDeterminista(codigo) {
+            let hash = 0;
+            
+            // Crear hash del código
+            for (let i = 0; i < codigo.length; i++) {
+                const char = codigo.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            
+            // Usar el hash para seleccionar una palabra de la lista
+            const indicePalabra = Math.abs(hash) % palabras.length;
+            return palabras[indicePalabra];
         }
 
         // Función para mostrar el orden de jugadores
@@ -633,95 +728,80 @@
             }
         }
 
-        // Función para obtener una palabra que no se haya usado recientemente
-        function obtenerPalabraAleatoria() {
-            let palabra;
-            let intentos = 0;
-            const maxIntentos = 30;
-            
-            do {
-                palabra = palabras[Math.floor(Math.random() * palabras.length)];
-                intentos++;
-                
-                if (intentos > maxIntentos) {
-                    palabrasUsadasRecientemente = [];
-                    break;
-                }
-            } while (palabrasUsadasRecientemente.includes(palabra));
-            
-            palabrasUsadasRecientemente.push(palabra);
-            
-            if (palabrasUsadasRecientemente.length > MAX_PALABRAS_RECIENTES) {
-                palabrasUsadasRecientemente.shift();
-            }
-            
-            return palabra;
-        }
-
-        // Función MEJORADA para seleccionar impostor de forma más justa
+        // Función MEJORADA para seleccionar impostor con probabilidad <7% de repetición
         function seleccionarImpostorJusto(codigoCompleto, totalJugadores) {
-            // Crear un hash más robusto del código
+            // Crear un hash robusto del código
             let hash = 0;
             for (let i = 0; i < codigoCompleto.length; i++) {
                 const char = codigoCompleto.charCodeAt(i);
                 hash = ((hash << 7) - hash) + char;
-                hash = hash & hash; // Convertir a 32-bit integer
+                hash = hash & hash;
             }
             
-            // Usar el hash absoluto para calcular el impostor
-            const impostor = Math.abs(hash) % totalJugadores + 1;
+            // Generar candidatos posibles (excluyendo al último impostor)
+            const candidatos = [];
+            for (let i = 1; i <= totalJugadores; i++) {
+                if (i !== ultimoImpostor) {
+                    candidatos.push(i);
+                }
+            }
             
-            return impostor;
+            // Si hay candidatos disponibles, elegir uno aleatoriamente
+            if (candidatos.length > 0) {
+                const indiceCandidato = Math.abs(hash) % candidatos.length;
+                const nuevoImpostor = candidatos[indiceCandidato];
+                
+                // Actualizar historial
+                ultimoImpostor = nuevoImpostor;
+                historialImpostores.push(nuevoImpostor);
+                
+                // Mantener el historial bajo control
+                if (historialImpostores.length > MAX_HISTORIAL_IMPOSTORES) {
+                    historialImpostores.shift();
+                }
+                
+                return nuevoImpostor;
+            } else {
+                // Caso extremo: solo hay un jugador (el último impostor)
+                // En este caso, forzamos que sea impostor de nuevo
+                return ultimoImpostor;
+            }
         }
 
-        // Función para codificar una palabra a un código de letras
-        function codificarPalabra(palabra) {
-            const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            let codigo = '';
-            let suma = 0;
-            
-            for (let i = 0; i < 6; i++) {
-                const indicePalabra = i % palabra.length;
-                const charCode = palabra.charCodeAt(indicePalabra);
-                suma += charCode;
-                
-                const indiceLetra = (charCode + i + suma) % 26;
-                codigo += letras[indiceLetra];
+        // Función para generar la siguiente partida de manera determinista
+        function generarSiguientePartida() {
+            // Si ya tenemos un código actual, usarlo como semilla para el siguiente
+            let semilla;
+            if (codigoPartidaActual) {
+                // Usar el código actual como semilla para generar el siguiente
+                semilla = codigoPartidaActual + rondaActual;
+            } else {
+                // Primera partida, usar semilla aleatoria
+                semilla = Date.now().toString();
             }
-            return codigo;
-        }
+            
+            // Generar código determinista que incluya info de jugadores
+            const nuevoCodigo = generarCodigoConJugadores(semilla, totalJugadoresPartida);
+            
+            // Generar palabra secreta determinista basada en el código
+            const palabraSecreta = obtenerPalabraDeterminista(nuevoCodigo);
+            
+            // Determinar impostor usando el sistema MEJORADO
+            const jugadorImpostor = seleccionarImpostorJusto(nuevoCodigo, totalJugadoresPartida);
 
-        // Función para decodificar el código a la palabra original
-        function decodificarPalabra(codigo) {
-            // Buscar la palabra en la lista que mejor coincida con el código
-            for (let palabra of palabras) {
-                const codigoGenerado = codificarPalabra(palabra);
-                if (codigoGenerado === codigo) {
-                    return palabra;
-                }
-            }
+            // Generar orden determinista de jugadores - ¡ESTA ES LA CLAVE!
+            // Usamos el MISMO código para generar el MISMO orden para todos
+            const ordenJugadores = generarOrdenDeterminista(totalJugadoresPartida, nuevoCodigo);
+
+            // Guardar el nuevo código como actual
+            codigoPartidaActual = nuevoCodigo;
             
-            // Si no encuentra coincidencia exacta, buscar la más similar
-            let mejorPalabra = palabras[0];
-            let mejorPuntuacion = 0;
-            
-            for (let palabra of palabras) {
-                const codigoGenerado = codificarPalabra(palabra);
-                let puntuacion = 0;
-                
-                for (let i = 0; i < codigo.length; i++) {
-                    if (codigoGenerado[i] === codigo[i]) {
-                        puntuacion++;
-                    }
-                }
-                
-                if (puntuacion > mejorPuntuacion) {
-                    mejorPuntuacion = puntuacion;
-                    mejorPalabra = palabra;
-                }
-            }
-            
-            return mejorPalabra;
+            return {
+                palabraSecreta: palabraSecreta,
+                jugadorImpostor: jugadorImpostor,
+                codigo: nuevoCodigo,
+                ordenJugadores: ordenJugadores
+            };
         }
 
         function startGame() {
@@ -773,29 +853,11 @@
         }
 
         function createGameCode() {
-            // Elegir palabra aleatoria (evitando repeticiones recientes)
-            const palabraSecreta = obtenerPalabraAleatoria();
+            // Generar nueva configuración de partida
+            const nuevaConfig = generarSiguientePartida();
             
-            // Codificar la palabra
-            const codigoPalabra = codificarPalabra(palabraSecreta);
-            
-            // Generar número aleatorio para el código (100-999)
-            const numeroCodigo = Math.floor(Math.random() * 900) + 100;
-            
-            // Crear código final: "986NASFGD"
-            const codigoCompleto = numeroCodigo + codigoPalabra;
-            
-            // Determinar impostor usando el sistema MEJORADO
-            const jugadorImpostor = seleccionarImpostorJusto(codigoCompleto, totalJugadoresPartida);
-
-            // Generar orden aleatorio de jugadores
-            const ordenJugadores = generarOrdenJugadores(totalJugadoresPartida);
-
             // Guardar configuración
-            gameConfig.palabraSecreta = palabraSecreta;
-            gameConfig.jugadorImpostor = jugadorImpostor;
-            gameConfig.codigo = codigoCompleto;
-            gameConfig.ordenJugadores = ordenJugadores;
+            gameConfig = nuevaConfig;
 
             // Ocultar configuración y mostrar código
             document.getElementById('stepPlayerCount').classList.add('hidden');
@@ -809,39 +871,36 @@
 
         function joinWithCreatedCode() {
             // El Jugador 1 se une a su propia partida creada
-            showResult();
+            mostrarResultado();
         }
 
         function joinGame() {
             const inputCode = document.getElementById('inputCode').value.toUpperCase().trim();
             
-            if (inputCode.length < 9) {
-                alert("Código inválido. Debe tener al menos 9 caracteres (ej: 986NASFGD)");
+            // Ahora los códigos llevan prefijo de 2 dígitos con el número de jugadores,
+            // por eso validamos longitud mínima 11 (2 + 9)
+            if (inputCode.length < 11) {
+                alert("Código inválido. Debe tener al menos 11 caracteres (ej: 03086NASFGD)");
                 return;
             }
 
-            // Extraer número y código de letras
-            const numeroCodigo = inputCode.substring(0, 3);
-            const codigoPalabra = inputCode.substring(3, 9);
+            // Guardar el código actual para la siguiente ronda
+            codigoPartidaActual = inputCode;
 
-            // Verificar que los primeros 3 caracteres sean números
-            if (!/^\d+$/.test(numeroCodigo)) {
-                alert("Código inválido. Los primeros 3 caracteres deben ser números");
-                return;
-            }
-
-            // Decodificar la palabra secreta
-            const palabraSecreta = decodificarPalabra(codigoPalabra);
+            // Extraer el número de jugadores del código (ahora a partir del prefijo de 2 dígitos)
+            const numJugadoresExtraido = obtenerNumeroJugadoresDesdeCodigo(inputCode);
             
-            // Para jugadores que no son el 1, necesitamos determinar el total de jugadores
-            // Podemos estimarlo basado en el código o usar un valor por defecto
-            const totalJugadores = totalJugadoresPartida || jugadoresDisponibles.length;
-            
-            // Determinar impostor usando el sistema MEJORADO
-            const jugadorImpostor = seleccionarImpostorJusto(inputCode, totalJugadores);
+            // Actualizar el número de jugadores con el valor extraído del código
+            totalJugadoresPartida = numJugadoresExtraido;
 
-            // Generar orden aleatorio de jugadores (debe ser el mismo para todos)
-            const ordenJugadores = generarOrdenJugadores(totalJugadores);
+            // Generar palabra secreta determinista basada en el código
+            const palabraSecreta = obtenerPalabraDeterminista(inputCode);
+
+            // Determinar impostor usando el sistema MEJORADO con probabilidad <7%
+            const jugadorImpostor = seleccionarImpostorJusto(inputCode, totalJugadoresPartida);
+
+            // Generar orden determinista de jugadores - ¡USANDO EL MISMO CÓDIGO!
+            const ordenJugadores = generarOrdenDeterminista(totalJugadoresPartida, inputCode);
 
             // Guardar configuración
             gameConfig.palabraSecreta = palabraSecreta;
@@ -849,11 +908,11 @@
             gameConfig.codigo = inputCode;
             gameConfig.ordenJugadores = ordenJugadores;
 
-            showResult();
+            mostrarResultado();
         }
 
-        function showResult() {
-            // Ocultar input y mostrar resultado
+        function mostrarResultado() {
+            // Ocultar todas las pantallas y mostrar resultado
             document.getElementById('stepCodeInput').classList.add('hidden');
             document.getElementById('stepResult').classList.remove('hidden');
             
@@ -864,8 +923,10 @@
                     <h2>🎭 IMPOSTOR</h2>
                     <p>No conoces la palabra secreta</p>
                     <p><small>Que no te descubran 🤫</small></p>
-                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">Código: ${gameConfig.codigo}</p>
-                    <p style="font-size: 0.9em; color: #666;">Jugadores: ${totalJugadoresPartida}</p>
+                    <div class="game-info">
+                        <p>Código: ${gameConfig.codigo}</p>
+                        <p>Jugadores: ${totalJugadoresPartida}</p>
+                    </div>
                 `;
                 resultado.className = 'result impostor';
             } else {
@@ -874,33 +935,53 @@
                     <p>La palabra secreta es:</p>
                     <h1 style="font-size: 1.8em; margin: 10px 0;">"${gameConfig.palabraSecreta}"</h1>
                     <p><small>Da pistas relacionadas con esta palabra</small></p>
-                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">Código: ${gameConfig.codigo}</p>
-                    <p style="font-size: 0.9em; color: #666;">Jugadores: ${totalJugadoresPartida}</p>
+                    <div class="game-info">
+                        <p>Código: ${gameConfig.codigo}</p>
+                        <p>Jugadores: ${totalJugadoresPartida}</p>
+                    </div>
                 `;
                 resultado.className = 'result inocente';
             }
             
-            // Mostrar el orden de jugadores
+            // Mostrar el orden de jugadores - ¡SIEMPRE EL MISMO PARA TODOS!
             mostrarOrdenJugadores();
         }
 
+        // Función para la siguiente ronda - TODOS obtienen el mismo código y misma palabra
+        function nextRound() {
+            rondaActual++;
+            
+            // Generar nueva configuración usando el código actual como semilla
+            const nuevaConfig = generarSiguientePartida();
+            
+            // Aplicar la nueva configuración
+            gameConfig = nuevaConfig;
+            
+            // Mostrar resultado directamente
+            mostrarResultado();
+        }
+
+        // Función para nueva partida (reinicia el ciclo)
+        function newGame() {
+            // Reiniciar variables para nueva partida
+            rondaActual = 1;
+            codigoPartidaActual = "";
+            ultimoImpostor = 0;
+            
+            // Generar nueva configuración
+            const nuevaConfig = generarSiguientePartida();
+            gameConfig = nuevaConfig;
+            mostrarResultado();
+        }
+
+        // Función para resetear completamente (volver a selección de jugador)
         function resetGame() {
-            // Ocultar todos los estados de jugadores
-            const statusElements = document.querySelectorAll('.player-status');
-            statusElements.forEach(status => {
-                status.style.display = 'none';
-            });
-            
-            // Ocultar resultado y mostrar selección de jugador
-            document.getElementById('stepResult').classList.add('hidden');
-            document.getElementById('stepPlayerSelect').classList.remove('hidden');
-            
-            // Ocultar orden de jugadores
-            document.getElementById('playerOrder').classList.add('hidden');
-            
             // Resetear variables
+            rondaActual = 1;
             jugadorSeleccionado = 0;
             totalJugadoresPartida = 4;
+            codigoPartidaActual = "";
+            ultimoImpostor = 0;
             gameConfig = { 
                 palabraSecreta: "", 
                 jugadorImpostor: 0, 
@@ -914,6 +995,20 @@
             
             // Resetear jugadores a los 4 iniciales
             jugadoresDisponibles = [1, 2, 3, 4];
+            
+            // Ocultar resultado y mostrar selección de jugador
+            document.getElementById('stepResult').classList.add('hidden');
+            document.getElementById('stepPlayerSelect').classList.remove('hidden');
+            
+            // Ocultar orden de jugadores
+            document.getElementById('playerOrder').classList.add('hidden');
+            
+            // Ocultar estados de jugadores
+            const statusElements = document.querySelectorAll('.player-status');
+            statusElements.forEach(status => {
+                status.style.display = 'none';
+            });
+            
             renderPlayerButtons();
         }
 
@@ -932,5 +1027,3 @@
     </script>
 </body>
 </html>
-
-
